@@ -1,0 +1,221 @@
+// API - GROUP ATENDIMENTO - WHATSAPP NÃO OFICIAL 
+try 
+{
+	dateTime = zoho.currenttime.toString("dd-MM-yyyy HH:mm","GMT-3");
+	lastShippingLog = dateTime;
+	updateDeal = Map();
+	headers = Map();
+	headers.put("Content-Type","application/json");
+	headers.put("access-token","66b3a9fbe0593a062c721b24");
+	whatsappNumberCheck = invokeurl
+	[
+		url :"https://api.groupatendimento.com.br/core/v2/api/wa-number-check/" + contactDestinationNumber
+		type :POST
+		headers:headers
+	];
+	if(whatsappNumberCheck.get("status") == "INVALID_WA_NUMBER")
+	{
+		lastShippingLog = lastShippingLog + " Erro! O número não possui Whatsapp válido.";
+		updateDeal.put("Log_Ultimo_Envio",lastShippingLog);
+		zoho.crm.updateRecord("Deals",dealId,updateDeal);
+		return lastShippingLog;
+	}
+	contactEntity = zoho.crm.getRecordById("Contacts",contactId);
+	contactAccountName = contactEntity.get("Account_Name").get("name");
+	if(contactAccountName == null)
+	{
+		lastShippingLog = lastShippingLog + " Erro! Gentileza verificar se o nome do cliente está preenchido.";
+		updateDeal.put("Log_Ultimo_Envio",lastShippingLog);
+		zoho.crm.updateRecord("Deals",dealId,updateDeal);
+		return lastShippingLog;
+	}
+	dealData = zoho.crm.getRecordById("Deals",dealId);
+	productOfInterest = dealData.get("Produto_de_Interesse");
+	if(productOfInterest == null)
+	{
+		lastShippingLog = lastShippingLog + " Erro! Produto de interesse não encontrado.";
+		updateDeal.put("Log_Ultimo_Envio",lastShippingLog);
+		zoho.crm.updateRecord("Deals",dealId,updateDeal);
+		return lastShippingLog;
+	}
+	sdrDeal = "";
+	if(dealData.get("Convertido_Por") != null)
+	{
+		sdrDeal = dealData.get("Convertido_Por").get("name");
+		if(sdrDeal == null || sdrDeal == "")
+		{
+			lastShippingLog = lastShippingLog + " Erro! SDR do Negócio não encontrado.";
+			updateDeal.put("Log_Ultimo_Envio",lastShippingLog);
+			zoho.crm.updateRecord("Deals",dealId,updateDeal);
+			return lastShippingLog;
+		}
+	}
+	else
+	{
+		lastShippingLog = lastShippingLog + " Erro! SDR do Negócio não encontrado.";
+		updateDeal.put("Log_Ultimo_Envio",lastShippingLog);
+		zoho.crm.updateRecord("Deals",dealId,updateDeal);
+		return lastShippingLog;
+	}
+	templateModule = zoho.crm.getRecordById("TemplatesWhatsApp",templateModuleId);
+	templateMessage = "";
+	if(templateModule != null && templateModule.get("Texto_do_Template") != null)
+	{
+		templateMessage = templateModule.get("Texto_do_Template");
+	}
+	messageWithLeadName = templateMessage.replaceAll("VAR_LEAD",contactAccountName);
+	messageWithProduct = messageWithLeadName.replaceAll("VAR_PRODUTO",productOfInterest);
+	messageWithSDR = messageWithProduct.replaceAll("VAR_SDR_NEGOCIO",sdrDeal);
+	messageToSend = "";
+	// Lembrar de remover essa variável
+	if(templateMessage != null && templateMessage != "")
+	{
+		messageToSend = messageWithSDR;
+	}
+	else if(messageToUser != null && messageToUser != "")
+	{
+		messageToSend = messageToUser;
+	}
+	else
+	{
+		lastShippingLog = lastShippingLog + " Escolha o template da mensagem ou escreva uma mensagem personalizada.";
+		updateDeal.put("Log_Ultimo_Envio",lastShippingLog);
+		zoho.crm.updateRecord("Deals",dealId,updateDeal);
+		return lastShippingLog;
+	}
+	headers = Map();
+	headers.put("Content-Type","application/json");
+	headers.put("access-token","66b3a9fbe0593a062c721b24");
+	// access-token do canal de whatsapp não oficial
+	allUsersGroupAtendimento = invokeurl
+	[
+		url :"https://api.groupatendimento.com.br/core/v2/api/users"
+		type :GET
+		headers:headers
+	];
+	usersGroupAtendimentoList = allUsersGroupAtendimento.toList();
+	groupAtendimentoUserID = "";
+	for each  user in usersGroupAtendimentoList
+	{
+		if(user.get("email") == userEmailZoho)
+		{
+			groupAtendimentoUserID = user.get("id");
+			break;
+		}
+	}
+	if(groupAtendimentoUserID == "")
+	{
+		lastShippingLog = lastShippingLog + " Erro! Gentileza verificar se o seu email está cadastrado na plataforma Group Atendimento.";
+		updateDeal.put("Log_Ultimo_Envio",lastShippingLog);
+		zoho.crm.updateRecord("Deals",dealId,updateDeal);
+		return lastShippingLog;
+	}
+	accessToken = "66b3a9fbe0593a062c721b24";
+	contentType = "application/json";
+	destinationNumber = "";
+	if(contactDestinationNumber != null && contactDestinationNumber != "")
+	{
+		destinationNumber = contactDestinationNumber;
+	}
+	else if(contactPhone != null && contactPhone != "")
+	{
+		destinationNumber = contactPhone;
+	}
+	else
+	{
+		lastShippingLog = lastShippingLog + " Erro. Verifique se o campo 'Telefone-Wpp' foi preenchido ou se o contato possui um número cadastrado.";
+		updateDeal.put("Log_Ultimo_Envio",lastShippingLog);
+		zoho.crm.updateRecord("Deals",dealId,updateDeal);
+		return lastShippingLog;
+	}
+	sectorId = "66b3acc39a6e269c807c19aa";
+	headers = Map();
+	headers.put("access-token",accessToken);
+	headers.put("Content-Type",contentType);
+	body = Map();
+	body.put("number",destinationNumber);
+	body.put("sectorId",sectorId);
+	body.put("message",messageToSend);
+	body.put("forceSend",true);
+	body.put("userId",groupAtendimentoUserID);
+	createNewService = invokeurl
+	[
+		url :"https://api.groupatendimento.com.br/core/v2/api/chats/create-new"
+		type :POST
+		parameters:body.toString()
+		headers:headers
+	];
+	chatId = createNewService.get("chatId");
+	currentChatId = createNewService.get("currentChatId");
+	headers = Map();
+	headers.put("Content-Type","application/json");
+	headers.put("access-token","66b3a9fbe0593a062c721b24");
+	urlToUse = "";
+	if(chatId != null && !chatId.isEmpty())
+	{
+		urlToUse = "https://api.groupatendimento.com.br/core/v2/api/chats/" + chatId;
+	}
+	else if(currentChatId != null && !currentChatId.isEmpty())
+	{
+		urlToUse = "https://api.groupatendimento.com.br/core/v2/api/chats/" + currentChatId;
+	}
+	else
+	{
+		lastShippingLog = lastShippingLog + " Nenhum chat ID disponível.";
+		updateDeal.put("Log_Ultimo_Envio",lastShippingLog);
+		zoho.crm.updateRecord("Deals",dealId,updateDeal);
+		return lastShippingLog;
+	}
+	searchDataChat = invokeurl
+	[
+		url :urlToUse
+		type :GET
+		headers:headers
+	];
+	currentUser = searchDataChat.get("currentUser").get("id");
+	dataUsersGroupAtendimento = invokeurl
+	[
+		url :"https://api.groupatendimento.com.br/core/v2/api/users/" + currentUser
+		type :GET
+		headers:headers
+	];
+	emailUser = dataUsersGroupAtendimento.get("email");
+	usersGroupAtendimentoList = allUsersGroupAtendimento.toList();
+	headers = Map();
+	headers.put("access-token",accessToken);
+	headers.put("Content-Type",contentType);
+	body = Map();
+	body.put("number",destinationNumber);
+	body.put("message",messageToSend);
+	body.put("quickAnswerId",messageToSend);
+	body.put("forceSend",true);
+	if(createNewService.get("errorCode") != "chat_11")
+	{
+		lastShippingLog = lastShippingLog + " MENSAGEM ATIVA ENVIADA POR: " + emailUser + ". Atendimento criado com sucesso para o número " + destinationNumber + ".";
+	}
+	else
+	{
+		sendText = invokeurl
+		[
+			url :"https://api.groupatendimento.com.br/core/v2/api/chats/send-text"
+			type :POST
+			parameters:body.toString()
+			headers:headers
+		];
+		lastShippingLog = lastShippingLog + " MENSAGEM ATIVA ENVIADA POR: " + emailUser + ". O atendimento para o número " + destinationNumber + " já se encontra em aberto. Responsável pela abertura do chat: " + emailUser;
+	}
+	updateDeal.put("Log_Ultimo_Envio",lastShippingLog);
+	updateDeal.put("Mensagem_Wpp",null);
+	zoho.crm.updateRecord("Deals",dealId,updateDeal);
+}
+catch (e)
+{
+	info e.lineNo;
+	info e.message;
+	info e;
+	lastShippingLog = lastShippingLog + e.message;
+	updateDeal.put("Log_Ultimo_Envio",lastShippingLog);
+	zoho.crm.updateRecord("Deals",dealId,updateDeal);
+	return lastShippingLog;
+}
+return lastShippingLog;
