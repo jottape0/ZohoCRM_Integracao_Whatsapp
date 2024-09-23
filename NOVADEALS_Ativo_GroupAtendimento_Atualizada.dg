@@ -6,7 +6,7 @@ try
 	updateDeal = Map();
 	headers = Map();
 	headers.put("Content-Type","application/json");
-	headers.put("access-token","66b3a9fbe0593a062c721b24");
+	headers.put("access-token","token_do_canal");
 	whatsappNumberCheck = invokeurl
 	[
 		url :"https://api.groupatendimento.com.br/core/v2/api/wa-number-check/" + contactDestinationNumber
@@ -85,8 +85,7 @@ try
 	}
 	headers = Map();
 	headers.put("Content-Type","application/json");
-	headers.put("access-token","66b3a9fbe0593a062c721b24");
-	// access-token do canal de whatsapp não oficial
+	headers.put("access-token","token_do_canal");
 	allUsersGroupAtendimento = invokeurl
 	[
 		url :"https://api.groupatendimento.com.br/core/v2/api/users"
@@ -110,7 +109,7 @@ try
 		zoho.crm.updateRecord("Deals",dealId,updateDeal);
 		return lastShippingLog;
 	}
-	accessToken = "66b3a9fbe0593a062c721b24";
+	accessToken = "token_do_canal";
 	contentType = "application/json";
 	destinationNumber = "";
 	if(contactDestinationNumber != null && contactDestinationNumber != "")
@@ -128,7 +127,7 @@ try
 		zoho.crm.updateRecord("Deals",dealId,updateDeal);
 		return lastShippingLog;
 	}
-	sectorId = "66b3acc39a6e269c807c19aa";
+	sectorId = "token_do_setor";
 	headers = Map();
 	headers.put("access-token",accessToken);
 	headers.put("Content-Type",contentType);
@@ -149,7 +148,7 @@ try
 	currentChatId = createNewService.get("currentChatId");
 	headers = Map();
 	headers.put("Content-Type","application/json");
-	headers.put("access-token","66b3a9fbe0593a062c721b24");
+	headers.put("access-token","token_do_canal");
 	urlToUse = "";
 	if(chatId != null && !chatId.isEmpty())
 	{
